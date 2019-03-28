@@ -1,4 +1,11 @@
 
+Add to this directory:
+
+ * weblogic-deploy.zip
+ * archive_1.0.zip by building the application in the base dir using build-archive.sh
+ * archive_2.0.zip by building the application in the base dir using build-archive.sh
+
+
 Deploy of base domain
 
  1. `build-domain-base-image.sh` -> _Base domain docker image pushed to docker.io_
