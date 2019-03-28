@@ -1,0 +1,35 @@
+#Copyright (c) 2018, 2019 Oracle and/or its affiliates. All rights reserved.
+FROM acsitaly01/domain1-base-image:1.1
+
+# Maintainer
+# ----------
+MAINTAINER Fabrizio Listell <fabrizio.listello@oracle.com>
+
+ARG WDT_ARCHIVE
+ARG WDT_VARIABLE
+ARG WDT_MODEL
+
+USER root
+COPY ${WDT_MODEL} ${WDT_ARCHIVE} ${WDT_VARIABLE} properties/*.properties ${PROPERTIES_FILE_DIR}/
+RUN chown -R oracle:oracle ${PROPERTIES_FILE_DIR}
+WORKDIR $ORACLE_HOME
+USER oracle
+RUN ${WDT_HOME}/bin/deployApps.sh \
+        -oracle_home $ORACLE_HOME \
+        -domain_home $DOMAIN_HOME \
+        -domain_type WLS \
+        -variable_file "$PROPERTIES_FILE_DIR/${WDT_VARIABLE##*/}" \
+        -model_file "$PROPERTIES_FILE_DIR/${WDT_MODEL##*/}" \
+        -archive_file "$PROPERTIES_FILE_DIR/${WDT_ARCHIVE##*/}" 
+
+# Mount the domain home and the WDT home for easy access.
+VOLUME $DOMAIN_HOME
+VOLUME $WDT_HOME
+
+# Expose admin server, managed server port and domain debug port
+EXPOSE $ADMIN_PORT $MANAGED_SERVER_PORT $DEBUG_PORT
+
+WORKDIR $DOMAIN_HOME
+
+# Define default command to start Admin Server in a container.
+CMD ["/u01/oracle/startAdminServer.sh"]
