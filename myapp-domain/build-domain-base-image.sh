@@ -13,20 +13,21 @@
 DOMAIN_NAME="myapp-domain-fl"
 . ../container-scripts/setEnv.sh properties/${DOMAIN_NAME}.properties
 
-BASE_VER="1.1"
-
 docker build \
     $DOCKER_OPTS \
     $BUILD_ARG \
-    --build-arg WDT_MODEL=empty-domain.yaml \
+    --build-arg WDT_MODEL=properties/wdt-domain-model_empty.yaml \
     --build-arg WDT_VARIABLE=properties/${DOMAIN_NAME}.properties \
     --force-rm=true \
-    -t domain1-base-image:$BASE_VER -f Dockerfile_base .
+    -t ${DOMAIN_NAME}-base-image:build -f Dockerfile_base .
 if [ $? -eq 0 ]; then
-    docker tag domain1-base-image:$BASE_VER acsitaly01/domain1-base-image:$BASE_VER
-    docker push acsitaly01/domain1-base-image:$BASE_VER
+    ID=$(docker image list --format="{{.ID}}" ${DOMAIN_NAME}-base-image:build)
+    docker tag ${DOMAIN_NAME}-base-image:build acsitaly01/${DOMAIN_NAME}-base-image:$ID
+    docker push acsitaly01/${DOMAIN_NAME}-base-image:$ID
     if [ $? -eq 0 ]; then
-        echo "PUSHED: acsitaly01/domain1-base-image:$BASE_VER"
+        echo 
+        echo "PUSHED: acsitaly01/${DOMAIN_NAME}-base-image:$ID"
+        echo
     fi
 else
     echo "ERROR WHILE BUILDING..."

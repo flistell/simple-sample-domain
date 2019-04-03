@@ -1,30 +1,38 @@
 #Copyright (c) 2018, 2019 Oracle and/or its affiliates. All rights reserved.
-FROM acsitaly01/domain1-base-image:1.1
+FROM acsitaly01/myapp-domain-fl-base-image:0b9b0598d453
 
 # Maintainer
 # ----------
-MAINTAINER Fabrizio Listell <fabrizio.listello@oracle.com>
+MAINTAINER Fabrizio Listello <fabrizio.listello@oracle.com>
 
 ARG WDT_ARCHIVE
 ARG WDT_VARIABLE
 ARG WDT_MODEL
+ARG CUSTOM_ADMIN_NAME=admin-server
+ARG CUSTOM_ADMIN_HOST=wlsadmin
+ARG CUSTOM_ADMIN_PORT=7001
+ARG CUSTOM_MANAGED_SERVER_PORT=8001
+ARG CUSTOM_DOMAIN_NAME=base_domain
+ARG CUSTOM_DEBUG_PORT=8453
 
 USER root
-COPY ${WDT_MODEL} ${WDT_ARCHIVE} ${WDT_VARIABLE} properties/*.properties ${PROPERTIES_FILE_DIR}/
+COPY ${WDT_MODEL} ${WDT_ARCHIVE} properties/*.properties ${PROPERTIES_FILE_DIR}/
 RUN chown -R oracle:oracle ${PROPERTIES_FILE_DIR}
+
 WORKDIR $ORACLE_HOME
 USER oracle
 RUN ${WDT_HOME}/bin/deployApps.sh \
         -oracle_home $ORACLE_HOME \
         -domain_home $DOMAIN_HOME \
         -domain_type WLS \
-        -variable_file "$PROPERTIES_FILE_DIR/${WDT_VARIABLE##*/}" \
-        -model_file "$PROPERTIES_FILE_DIR/${WDT_MODEL##*/}" \
-        -archive_file "$PROPERTIES_FILE_DIR/${WDT_ARCHIVE##*/}" 
+        -variable_file $PROPERTIES_FILE_DIR/${WDT_VARIABLE##*/} \
+        -model_file $PROPERTIES_FILE_DIR/${WDT_MODEL##*/} \
+        -archive_file $PROPERTIES_FILE_DIR/${WDT_ARCHIVE##*/} && \
+        date > $ORACLE_HOME/build_timestamp.txt
 
 # Mount the domain home and the WDT home for easy access.
-VOLUME $DOMAIN_HOME
-VOLUME $WDT_HOME
+# VOLUME $DOMAIN_HOME
+# VOLUME $WDT_HOME
 
 # Expose admin server, managed server port and domain debug port
 EXPOSE $ADMIN_PORT $MANAGED_SERVER_PORT $DEBUG_PORT

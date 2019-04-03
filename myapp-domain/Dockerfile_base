@@ -92,8 +92,9 @@ COPY container-scripts/* ${SCRIPT_HOME}/
 USER root
 RUN chmod +xw ${SCRIPT_HOME}/*.sh && \
     chown -R oracle:oracle ${SCRIPT_HOME} && \
-    mkdir -p +xwr $PROPERTIES_FILE_DIR && \
+    mkdir -p $PROPERTIES_FILE_DIR && \
     chown -R oracle:oracle $PROPERTIES_FILE_DIR && \
+    chmod -R a+xwr $PROPERTIES_FILE_DIR && \
     mkdir -p $DOMAIN_PARENT && \
     chown -R oracle:oracle $DOMAIN_PARENT && \
     chmod -R a+xwr $DOMAIN_PARENT && \
@@ -111,7 +112,7 @@ ENV WDT_HOME=$WDT_HOME/weblogic-deploy
 # These files will be removed after the image is built.
 # Be sure to build with --force-rm to eliminate this container layer
 
-COPY ${WDT_MODEL} ${WDT_ARCHIVE} ${WDT_VARIABLE} properties/*.properties ${PROPERTIES_FILE_DIR}/
+COPY ${WDT_MODEL} ${WDT_ARCHIVE} properties/*.properties ${PROPERTIES_FILE_DIR}/
 # --chown for COPY is available in docker version 18 'COPY --chown oracle:oracle'
 RUN chown -R oracle:oracle ${PROPERTIES_FILE_DIR}
 
@@ -124,23 +125,19 @@ RUN chown -R oracle:oracle ${PROPERTIES_FILE_DIR}
 # Set WORKDIR for @@PWD@@ global token in model file
 WORKDIR $ORACLE_HOME
 USER oracle
-RUN if [ -n "$WDT_MODEL" ]; then MODEL_OPT="-model_file $PROPERTIES_FILE_DIR/${WDT_MODEL##*/}"; fi && \
-    if [ -n "$WDT_ARCHIVE" ]; then ARCHIVE_OPT="-archive_file $PROPERTIES_FILE_DIR/${WDT_ARCHIVE##*/}"; fi && \
-    if [ -n "$WDT_VARIABLE" ]; then VARIABLE_OPT="-variable_file $PROPERTIES_FILE_DIR/${WDT_VARIABLE##*/}"; fi && \
-    ${WDT_HOME}/bin/createDomain.sh \
+RUN ${WDT_HOME}/bin/createDomain.sh \
         -oracle_home $ORACLE_HOME \
         -java_home $JAVA_HOME \
         -domain_home $DOMAIN_HOME \
         -domain_type WLS \
-        $VARIABLE_OPT  \
-        $MODEL_OPT \
-        $ARCHIVE_OPT && \
-        echo ". $DOMAIN_HOME/bin/setDomainEnv.sh" >> /u01/oracle/.bashrc && \
+        -variable_file $PROPERTIES_FILE_DIR/${WDT_VARIABLE##*/} \
+        -model_file $PROPERTIES_FILE_DIR/${WDT_MODEL##*/} \
+        && echo ". $DOMAIN_HOME/bin/setDomainEnv.sh" >> /u01/oracle/.bashrc && \
         rm -rf $PROPERTIES_FILE_DIR 
 
 # Mount the domain home and the WDT home for easy access.
-VOLUME $DOMAIN_HOME
-VOLUME $WDT_HOME
+# VOLUME $DOMAIN_HOME
+# VOLUME $WDT_HOME
 
 # Expose admin server, managed server port and domain debug port
 EXPOSE $ADMIN_PORT $MANAGED_SERVER_PORT $DEBUG_PORT

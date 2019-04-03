@@ -12,16 +12,19 @@
 DOMAIN_NAME="myapp-domain-fl"
 . ../container-scripts/setEnv.sh properties/${DOMAIN_NAME}.properties
 
-VERSION=1.0
+VERSION="1.0"
 
 docker build \
+    $DOCKER_OPTS \
     $BUILD_ARG \
-    --build-arg WDT_MODEL=simple-topology.yaml \
+    --build-arg WDT_MODEL=properties/wdt-domain-model_app-deployment.yaml \
     --build-arg WDT_VARIABLE=properties/${DOMAIN_NAME}.properties \
     --build-arg WDT_ARCHIVE=archive_${VERSION}.zip \
     --force-rm=true \
-    -t domain1-app-image:$VERSION -f Dockerfile_app_${VERSION} .
+    -t ${DOMAIN_NAME}-app-image-$VERSION:build \
+    -f Dockerfile_app_${VERSION} .
 if [ $? -eq 0 ]; then
-    docker tag domain1-app-image:$VERSION acsitaly01/domain1-app-image:$VERSION
-    docker push acsitaly01/domain1-app-image:$VERSION
+    ID=$(docker image list --format="{{.ID}}" ${DOMAIN_NAME}-app-image-$VERSION:build)
+    docker tag ${DOMAIN_NAME}-app-image-$VERSION:build acsitaly01/${DOMAIN_NAME}-app-image-$VERSION:$ID
+    docker push acsitaly01/${DOMAIN_NAME}-app-image-$VERSION:$ID
 fi
