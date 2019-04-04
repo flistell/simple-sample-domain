@@ -1,0 +1,57 @@
+---
+- name: Build Updated Images
+  hosts: build_server
+  environment:
+    KUBE_CONFIG: "{{ KUBE_CONFIG }}"
+  vars:
+    target: "target_app"
+    DOMAIN_IMAGE: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base"
+    DOMAIN_IMAGE_TAG: "{{ DOMAIN_BASE_IMAGE_TAG }}"
+  tasks:
+    - file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ target }}"
+        - "{{ target }}/wlsdeploy"
+        - "{{ target }}/wlsdeploy/applications"
+    - name: Prepare application archive
+      copy:
+        src: "applications/{{ APP_DISTFILE }}"
+        dest: "{{ target }}/wlsdeploy/applications"
+    - name: Create archive module.
+      archive:
+        dest: "{{ target }}/archive.zip"
+        format: "zip"
+        path: "{{ target }}/wlsdeploy"
+    - name: Build the model
+      template:
+        src: wdt-domain-model-app.yaml.j2
+        dest: "{{ target }}/wdt-domain-model-app.yaml"
+    - name: Build the Dockerfile
+      template:
+        src: Dockerfile_app.j2
+        dest: "{{ target }}/Dockerfile"
+    - name: Build image with app
+      docker_image:
+        path: "./{{ target }}"
+        name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}"
+        tag: "build"
+        dockerfile: Dockerfile
+        state: present
+        rm: true
+        buildargs:
+          WDT_MODEL: "wdt-domain-model-app.yaml"
+          WDT_ARCHIVE: "archive.zip"
+      register: image_build
+    - name: Name for set_fact module.
+      set_fact:
+        DOMAIN_APP_IMAGE_TAG: "{{ image_facts.images[0].Id | regex_replace('^sha256:','') | truncate(12, True, '') }}"
+    - name: Push base image
+      docker_image:
+        name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}:build"
+        repository: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}:{{ DOMAIN_APP_IMAGE_TAG }}"
+        push: true
+        pull: false
+        state: present
+    - debug: var=DOMAIN_APP_IMAGE_TAG

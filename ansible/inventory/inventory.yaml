@@ -1,0 +1,15 @@
+---
+all:
+  hosts:
+    localhost
+  children:
+    build_server:
+      hosts:
+        localhost
+      vars:
+        ansible_connection: local
+    k8s_client_host:
+      hosts:
+        localhost
+      vars:
+        ansible_connection: local

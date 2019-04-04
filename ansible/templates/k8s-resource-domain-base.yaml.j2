@@ -1,0 +1,30 @@
+apiVersion: "weblogic.oracle/v2"
+kind: Domain
+metadata:
+  name: "{{ DOMAIN_NAME }}"
+  namespace: "{{ DOMAIN_NAMESPACE }}"
+  labels:
+    weblogic.resourceVersion: domain-v2
+    weblogic.domainUID: "{{ DOMAIN_UID }}"
+spec:
+  restartVersion: "domain-base"
+  domainHome: /u01/oracle/user_projects/domains/{{ DOMAIN_NAME }}
+  domainHomeInImage: true
+  image: "{{ DOMAIN_IMAGE }}:{{ DOMAIN_IMAGE_TAG }}"
+  imagePullPolicy: "IfNotPresent"
+  webLogicCredentialsSecret:
+    name: "{{ DOMAIN_SECRET }}"
+  includeServerOutInPodLog: true
+  serverStartPolicy: "IF_NEEDED"
+  serverPod:
+    env:
+    - name: JAVA_OPTIONS
+      value: "-Dweblogic.StdoutDebugEnabled=false"
+    - name: USER_MEM_ARGS
+      value: "-Djava.security.egd=file:/dev/./urandom -Xms64m -Xmx256m "
+  adminServer:
+    serverStartState: "RUNNING"
+  clusters:
+  - clusterName: cluster-1
+    serverStartState: "RUNNING"
+    replicas: 2

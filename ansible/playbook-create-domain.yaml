@@ -1,0 +1,25 @@
+---
+- name: Create Domain  on K8S with Operator
+  hosts: k8s_client_host
+  environment:
+    KUBE_CONFIG: "{{ KUBE_CONFIG }}"
+  vars:
+    target: "target"
+    DOMAIN_IMAGE: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base"
+    DOMAIN_IMAGE_TAG: "{{ DOMAIN_BASE_IMAGE_TAG }}"
+  tasks:
+    - name: Credentials
+      template:
+        src: k8s-resource-secret.yaml.j2
+        dest: "{{ target }}/k8s-resource-secret.yaml"
+    - name: Domain definition
+      template:
+        src: k8s-resource-domain-base.yaml.j2
+        dest: "{{ target }}/k8s-resource-domain-base.yaml"
+    - name: Apply Credentials
+      command: kubectl apply -f {{ target }}/k8s-resource-secret.yaml
+      ignore_errors: true
+    - name: Create Domain
+      command: kubectl create -f {{ target }}/k8s-resource-domain-base.yaml
+      ignore_errors: true
+

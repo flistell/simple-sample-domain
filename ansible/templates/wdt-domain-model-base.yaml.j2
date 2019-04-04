@@ -1,0 +1,29 @@
+domainInfo:
+    AdminUserName: '{{ WLS_ADMIN_USER }}'
+    AdminPassword: '{{ WLS_ADMIN_PASSWORD }}'
+topology:
+    Name: '{{ DOMAIN_NAME }}'
+    AdminServerName: '{{ ADMIN_NAME }}'
+    ProductionModeEnabled: '{{ PRODUCTION_MODE_ENABLED }}'
+    Log:
+        FileName: '{{ DOMAIN_NAME }}.log'
+    Cluster:
+        '{{ CLUSTER_NAME }}':
+            DynamicServers:
+                ServerTemplate: '{{ CLUSTER_NAME }}-template'
+                CalculatedListenPorts: false
+                ServerNamePrefix: '{{ MANAGED_SERVER_NAME_BASE }}'
+                DynamicClusterSize: '{{ CONFIGURED_MANAGED_SERVER_COUNT }}'
+                MaxDynamicClusterSize: '{{ CONFIGURED_MANAGED_SERVER_COUNT }}'
+    Server:
+        '{{ ADMIN_NAME }}':
+            ListenPort: '{{ ADMIN_PORT }}'
+            NetworkAccessPoint:
+                T3Channel:
+                    ListenPort: '{{ T3_CHANNEL_PORT }}'
+                    PublicAddress: '{{ T3_PUBLIC_ADDRESS }}'
+                    PublicPort: '{{ T3_CHANNEL_PORT }}'
+    ServerTemplate:
+        '{{ CLUSTER_NAME }}-template':
+            ListenPort: '{{ MANAGED_SERVER_PORT }}'
+            Cluster: '{{ CLUSTER_NAME }}'
