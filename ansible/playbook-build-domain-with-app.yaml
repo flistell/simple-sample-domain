@@ -1,10 +1,12 @@
 ---
-- name: Build Updated Images
+- name: Build Domain image with application
   hosts: build_server
   environment:
     KUBE_CONFIG: "{{ KUBE_CONFIG }}"
+  vars_files:
+    - "target/domain_base_image_tag.yaml"
   vars:
-    target: "target_app"
+    target_app: "target_app"
     DOMAIN_IMAGE: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base"
     DOMAIN_IMAGE_TAG: "{{ DOMAIN_BASE_IMAGE_TAG }}"
   tasks:
@@ -12,29 +14,29 @@
         path: "{{ item }}"
         state: directory
       with_items:
-        - "{{ target }}"
-        - "{{ target }}/wlsdeploy"
-        - "{{ target }}/wlsdeploy/applications"
+        - "{{ target_app }}"
+        - "{{ target_app }}/wlsdeploy"
+        - "{{ target_app }}/wlsdeploy/applications"
     - name: Prepare application archive
       copy:
         src: "applications/{{ APP_DISTFILE }}"
-        dest: "{{ target }}/wlsdeploy/applications"
+        dest: "{{ target_app }}/wlsdeploy/applications"
     - name: Create archive module.
       archive:
-        dest: "{{ target }}/archive.zip"
+        dest: "{{ target_app }}/archive.zip"
         format: "zip"
-        path: "{{ target }}/wlsdeploy"
+        path: "{{ target_app }}/wlsdeploy"
     - name: Build the model
       template:
         src: wdt-domain-model-app.yaml.j2
-        dest: "{{ target }}/wdt-domain-model-app.yaml"
+        dest: "{{ target_app }}/wdt-domain-model-app.yaml"
     - name: Build the Dockerfile
       template:
         src: Dockerfile_app.j2
-        dest: "{{ target }}/Dockerfile"
+        dest: "{{ target_app }}/Dockerfile"
     - name: Build image with app
       docker_image:
-        path: "./{{ target }}"
+        path: "./{{ target_app }}"
         name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}"
         tag: "build"
         dockerfile: Dockerfile
@@ -44,6 +46,9 @@
           WDT_MODEL: "wdt-domain-model-app.yaml"
           WDT_ARCHIVE: "archive.zip"
       register: image_build
+    - docker_image_facts:
+        name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}:build"
+      register: image_facts
     - name: Name for set_fact module.
       set_fact:
         DOMAIN_APP_IMAGE_TAG: "{{ image_facts.images[0].Id | regex_replace('^sha256:','') | truncate(12, True, '') }}"
@@ -55,3 +60,18 @@
         pull: false
         state: present
     - debug: var=DOMAIN_APP_IMAGE_TAG
+    - name: Create k8s instruction to rollout the image
+      copy:
+        dest: "{{ target_app }}/k8s-resource-domain-patch.yaml"
+        content: |
+          # Apply with `kubectl patch domain -n {{ DOMAIN_NAMESPACE }} {{ DOMAIN_NAME }} --type=merge --patch "$(cat {{ target_app }}/k8s-resource-domain-patch.yaml)"`
+          spec:
+            image: {{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}:{{ DOMAIN_APP_IMAGE_TAG }}
+
+    - name: Save DOMAIN_APP_IMAGE_TAG to file
+      copy:
+        dest: "{{ target_app }}/domain_app_image_tag.yaml"
+        content: |
+          DOMAIN_BASE_IMAGE_TAG: {{ DOMAIN_BASE_IMAGE_TAG }}
+          DOMAIN_APP_IMAGE_TAG: {{ DOMAIN_APP_IMAGE_TAG }}
+          DOMAIN_APP_IMAGE: {{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}:{{ DOMAIN_APP_IMAGE_TAG }}
