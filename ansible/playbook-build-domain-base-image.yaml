@@ -2,41 +2,41 @@
 - name: Build image
   hosts: build_server
   vars:
-    target: "target"
+    target_base: "target"
   tasks:
     - debug: var=hostvars verbosity=2
     - file:
         path: "{{ item }}"
         state: directory
       with_items:
-        - "{{ target }}"
-        - "{{ target }}/container-scripts"
+        - "{{ target_base }}"
+        - "{{ target_base }}/container-scripts"
     - name: Add WDT to image
       copy:
         src: files/weblogic-deploy.zip
-        dest: "{{ target }}/weblogic-deploy.zip"
+        dest: "{{ target_base }}/weblogic-deploy.zip"
     - name: Add misc scripts to image
       copy:
         src: "{{ item }}"
-        dest: "{{ target }}/container-scripts"
+        dest: "{{ target_base }}/container-scripts"
       with_fileglob:
         - files/container-scripts/*
     - name: Prepare domain base archive
       archive:
-        dest: "{{ target }}/archive.zip"
+        dest: "{{ target_base }}/archive.zip"
         format: "zip"
         path: "domain/"
     - name: Build the model
       template:
         src: wdt-domain-model-base.yaml.j2
-        dest: "{{ target }}/wdt-domain-model-base.yaml"
+        dest: "{{ target_base }}/wdt-domain-model-base.yaml"
     - name: Build the Dockerfile
       template:
         src: Dockerfile.j2
-        dest: "{{ target }}/Dockerfile"
+        dest: "{{ target_base }}/Dockerfile"
     - name: Build base image
       docker_image:
-        path: "./{{ target }}"
+        path: "./{{ target_base }}"
         name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base"
         tag: "build"
         dockerfile: Dockerfile
@@ -62,7 +62,7 @@
         state: present
     - name: Save DOMAIN_BASE_IMAGE_TAG to file
       copy:
-        dest: target_app/domain_base_image_tag.yaml
+        dest: "{{ target_base }}/domain_base_image_tag.yaml"
         content: |
           DOMAIN_BASE_IMAGE_TAG: {{ DOMAIN_BASE_IMAGE_TAG }}
     - debug: var=DOMAIN_BASE_IMAGE_TAG
@@ -76,29 +76,29 @@
 #         path: "{{ item }}"
 #         state: directory
 #       with_items:
-#         - "{{ target }}"
-#         - "{{ target }}/wlsdeploy"
-#         - "{{ target }}/wlsdeploy/applications"
+#         - "{{ target_base }}"
+#         - "{{ target_base }}/wlsdeploy"
+#         - "{{ target_base }}/wlsdeploy/applications"
 #     - name: Prepare application archive
 #       copy:
 #         src: "applications/{{ APP_DISTFILE }}"
-#         dest: "{{ target }}/wlsdeploy/applications"
+#         dest: "{{ target_base }}/wlsdeploy/applications"
 #     - name: Create archive module.
 #       archive:
-#         dest: "{{ target }}/archive.zip"
+#         dest: "{{ target_base }}/archive.zip"
 #         format: "zip"
-#         path: "{{ target }}/wlsdeploy"
+#         path: "{{ target_base }}/wlsdeploy"
 #     - name: Build the model
 #       template:
 #         src: wdt-domain-model-app.yaml.j2
-#         dest: "{{ target }}/wdt-domain-model-app.yaml"
+#         dest: "{{ target_base }}/wdt-domain-model-app.yaml"
 #     - name: Build the Dockerfile
 #       template:
 #         src: Dockerfile_app.j2
-#         dest: "{{ target }}/Dockerfile"
+#         dest: "{{ target_base }}/Dockerfile"
 #     - name: Build image with app
 #       docker_image:
-#         path: "./{{ target }}"
+#         path: "./{{ target_base }}"
 #         name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}"
 #         tag: "build"
 #         dockerfile: Dockerfile

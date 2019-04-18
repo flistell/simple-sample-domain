@@ -1,28 +1,31 @@
 # @PLAYBOOK
 # This playbook creates a weblogic domain inside the K8S cluster by using the Operator
-# 
+
 ---
 - name: Create Domain on K8S with Operator
   hosts: k8s_client_host
   environment:
     KUBE_CONFIG: "{{ KUBE_CONFIG }}"
   vars:
-    target: "target"
+    target_base: "target"
     DOMAIN_IMAGE: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base"
     DOMAIN_IMAGE_TAG: "{{ DOMAIN_BASE_IMAGE_TAG }}"
+    SECRET_NAME: "{{ DOMAIN_UID }}-weblogic-credentials"
+  vars_files:
+    - "target/domain_base_image_tag.yaml"
   tasks:
     - name: Credentials
       template:
         src: k8s-resource-secret.yaml.j2
-        dest: "{{ target }}/k8s-resource-secret.yaml"
+        dest: "{{ target_base }}/k8s-resource-secret.yaml"
     - name: Domain definition
       template:
         src: k8s-resource-domain-base.yaml.j2
-        dest: "{{ target }}/k8s-resource-domain-base.yaml"
-    - name: Apply Credentials
-      command: kubectl apply -f {{ target }}/k8s-resource-secret.yaml
-      ignore_errors: true
+        dest: "{{ target_base }}/k8s-resource-domain-base.yaml"
+    - name: Create credentials
+      command: kubectl create secret generic -n {{ DOMAIN_NAMESPACE }} {{ SECRET_NAME }} --from-literal=username={{ WLS_ADMIN_USER }} --from-literal=password={{ WLS_ADMIN_PASSWORD }}
+    - name: Label credentials
+      command: kubectl label secret -n {{ DOMAIN_NAMESPACE }} {{ SECRET_NAME }} weblogic.domainUID={{ DOMAIN_UID }} weblogic.domainName={{ DOMAIN_NAME }}
     - name: Create Domain
-      command: kubectl create -f {{ target }}/k8s-resource-domain-base.yaml
+      command: kubectl create -f {{ target_base }}/k8s-resource-domain-base.yaml
       ignore_errors: true
-
