@@ -11,14 +11,21 @@
       with_items:
         - "{{ target }}"
         - "{{ target }}/container-scripts"
-    - copy:
+    - name: Add WDT to image
+      copy:
         src: files/weblogic-deploy.zip
         dest: "{{ target }}/weblogic-deploy.zip"
-    - copy:
+    - name: Add misc scripts to image
+      copy:
         src: "{{ item }}"
         dest: "{{ target }}/container-scripts"
       with_fileglob:
         - files/container-scripts/*
+    - name: Prepare domain base archive
+      archive:
+        dest: "{{ target }}/archive.zip"
+        format: "zip"
+        path: "domain/"
     - name: Build the model
       template:
         src: wdt-domain-model-base.yaml.j2
@@ -40,12 +47,9 @@
           WDT_MODEL: "wdt-domain-model-base.yaml"
           WDT_ARCHIVE: "archive.zip"
       register: image_build
-    - debug: var=image_build
-    - debug: var=image_build.image.Id
     - docker_image_facts:
         name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-base:build"
       register: image_facts
-    - debug: var=image_facts.images[0].Id
     - name: Name for set_fact module.
       set_fact:
         DOMAIN_BASE_IMAGE_TAG: "{{ image_facts.images[0].Id | regex_replace('^sha256:','') | truncate(12, True, '') }}"
@@ -56,46 +60,51 @@
         push: true
         pull: false
         state: present
+    - name: Save DOMAIN_BASE_IMAGE_TAG to file
+      copy:
+        dest: target_app/domain_base_image_tag.yaml
+        content: |
+          DOMAIN_BASE_IMAGE_TAG: {{ DOMAIN_BASE_IMAGE_TAG }}
     - debug: var=DOMAIN_BASE_IMAGE_TAG
 
-- name: Build Image with applications
-  hosts: build_server
-  vars:
-    target: "target_app"
-  tasks:
-    - file:
-        path: "{{ item }}"
-        state: directory
-      with_items:
-        - "{{ target }}"
-        - "{{ target }}/wlsdeploy"
-        - "{{ target }}/wlsdeploy/applications"
-    - name: Prepare application archive
-      copy:
-        src: "applications/{{ APP_DISTFILE }}"
-        dest: "{{ target }}/wlsdeploy/applications"
-    - name: Create archive module.
-      archive:
-        dest: "{{ target }}/archive.zip"
-        format: "zip"
-        path: "{{ target }}/wlsdeploy"
-    - name: Build the model
-      template:
-        src: wdt-domain-model-app.yaml.j2
-        dest: "{{ target }}/wdt-domain-model-app.yaml"
-    - name: Build the Dockerfile
-      template:
-        src: Dockerfile_app.j2
-        dest: "{{ target }}/Dockerfile"
-    - name: Build image with app
-      docker_image:
-        path: "./{{ target }}"
-        name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}"
-        tag: "build"
-        dockerfile: Dockerfile
-        state: present
-        rm: true
-        buildargs:
-          WDT_MODEL: "wdt-domain-model-app.yaml"
-          WDT_ARCHIVE: "archive.zip"
-      register: image_build
+# - name: Build Image with applications
+#   hosts: build_server
+#   vars:
+#     target: "target_app"
+#   tasks:
+#     - file:
+#         path: "{{ item }}"
+#         state: directory
+#       with_items:
+#         - "{{ target }}"
+#         - "{{ target }}/wlsdeploy"
+#         - "{{ target }}/wlsdeploy/applications"
+#     - name: Prepare application archive
+#       copy:
+#         src: "applications/{{ APP_DISTFILE }}"
+#         dest: "{{ target }}/wlsdeploy/applications"
+#     - name: Create archive module.
+#       archive:
+#         dest: "{{ target }}/archive.zip"
+#         format: "zip"
+#         path: "{{ target }}/wlsdeploy"
+#     - name: Build the model
+#       template:
+#         src: wdt-domain-model-app.yaml.j2
+#         dest: "{{ target }}/wdt-domain-model-app.yaml"
+#     - name: Build the Dockerfile
+#       template:
+#         src: Dockerfile_app.j2
+#         dest: "{{ target }}/Dockerfile"
+#     - name: Build image with app
+#       docker_image:
+#         path: "./{{ target }}"
+#         name: "{{ DOCKER_REPOSITORY }}/{{ DOMAIN_NAME }}-{{ VER }}"
+#         tag: "build"
+#         dockerfile: Dockerfile
+#         state: present
+#         rm: true
+#         buildargs:
+#           WDT_MODEL: "wdt-domain-model-app.yaml"
+#           WDT_ARCHIVE: "archive.zip"
+#       register: image_build

@@ -75,8 +75,7 @@ RUN ${WDT_HOME}/bin/createDomain.sh \
         -domain_home $DOMAIN_HOME \
         -domain_type WLS \
         -model_file $PROPERTIES_FILE_DIR/${WDT_MODEL##*/} \
-        && echo ". $DOMAIN_HOME/bin/setDomainEnv.sh" >> /u01/oracle/.bashrc && \
-        rm -rf $PROPERTIES_FILE_DIR 
+        && echo ". $DOMAIN_HOME/bin/setDomainEnv.sh" >> /u01/oracle/.bashrc
 
 # Mount the domain home and the WDT home for easy access.
 # VOLUME $DOMAIN_HOME

@@ -1,5 +1,8 @@
+# @PLAYBOOK
+# This playbook creates a weblogic domain inside the K8S cluster by using the Operator
+# 
 ---
-- name: Create Domain  on K8S with Operator
+- name: Create Domain on K8S with Operator
   hosts: k8s_client_host
   environment:
     KUBE_CONFIG: "{{ KUBE_CONFIG }}"
